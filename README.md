@@ -20,8 +20,17 @@ Or deploy it for free with GitHub Pages: Settings → Pages → deploy from this
 **Today tab**
 - Checklist grouped into Fitness / Nutrition / Med School / Discipline
 - A completion ring + streak counter (a "win" day = hitting your threshold %, default 80%)
-- Add or remove your own goals per category — the defaults are a starting point, not a script
+- Add or remove your own goals per category any time
 - A daily notes/reflection box
+
+**The goal list (finalized)**
+
+| Fitness | Nutrition | Med School | Discipline |
+|---|---|---|---|
+| Workout completed (lift / run / HIIT) | Meals tracked & calories hit | 1 module complete | Up at 5:30, no snooze |
+| Hit 10,000 steps | Water goal hit (3L+) | Anki fully completed | 7+ hours sleep last night |
+| Mobility / stretch session | No junk / processed food | 3 practice questions (Qbank) done | No scrolling phone on first wake up |
+| | Supplements taken | Lecture / rotation review done | Reflected & planned tomorrow |
 
 **History tab**
 - Current streak, total win days, and average daily completion

@@ -24,22 +24,22 @@ const QUOTES = [
 const DEFAULT_GOALS = [
   // Fitness
   { id: "g1", category: "fitness", label: "Workout completed (lift / run / HIIT)" },
-  { id: "g2", category: "fitness", label: "Steps or cardio goal hit" },
+  { id: "g2", category: "fitness", label: "Hit 10,000 steps" },
   { id: "g3", category: "fitness", label: "Mobility / stretch session" },
   // Nutrition
-  { id: "n1", category: "nutrition", label: "Protein target hit" },
+  { id: "n1", category: "nutrition", label: "Meals tracked & calories hit" },
   { id: "n2", category: "nutrition", label: "Water goal hit (3L+)" },
   { id: "n3", category: "nutrition", label: "No junk / processed food" },
-  { id: "n4", category: "nutrition", label: "Meals planned & logged" },
+  { id: "n4", category: "nutrition", label: "Supplements taken" },
   // Study
-  { id: "s1", category: "study", label: "Deep study block completed" },
-  { id: "s2", category: "study", label: "Anki / spaced repetition done" },
-  { id: "s3", category: "study", label: "Practice questions (Qbank) done" },
+  { id: "s1", category: "study", label: "1 module complete" },
+  { id: "s2", category: "study", label: "Anki fully completed" },
+  { id: "s3", category: "study", label: "3 practice questions (Qbank) done" },
   { id: "s4", category: "study", label: "Lecture / rotation review done" },
   // Discipline
-  { id: "d1", category: "discipline", label: "Up at target wake time, no snooze" },
+  { id: "d1", category: "discipline", label: "Up at 5:30, no snooze" },
   { id: "d2", category: "discipline", label: "7+ hours sleep last night" },
-  { id: "d3", category: "discipline", label: "No phone first 30 min of day" },
+  { id: "d3", category: "discipline", label: "No scrolling phone on first wake up" },
   { id: "d4", category: "discipline", label: "Reflected & planned tomorrow" },
 ];
 
