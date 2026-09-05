@@ -66,16 +66,16 @@ body {
   inset: 0;
   background-image: url("assets/inspiration.jpg");
   background-size: cover;
-  background-position: center 20%;
-  filter: saturate(0.85) brightness(0.55);
-  transform: scale(1.03);
+  background-position: center 8%;
+  filter: saturate(0.8) brightness(0.4) blur(1px);
+  transform: scale(1.05);
 }
 
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(5,7,4,0.55) 55%, var(--bg) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(5,7,4,0.75) 55%, var(--bg) 100%);
 }
 
 .hero-content {
