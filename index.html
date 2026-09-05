@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DAWG — Daily Check-In</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="hero">
+      <div class="hero-content">
+        <div class="hero-quote" id="hero-quote">I love discipline.</div>
+        <div class="hero-title">DAWG</div>
+        <div class="hero-date" id="hero-date">Today</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="today">Today</div>
+      <div class="tab" data-tab="history">History</div>
+    </div>
+
+    <!-- TODAY VIEW -->
+    <div class="view active" id="view-today">
+
+      <div class="summary">
+        <div class="ring-wrap">
+          <div id="ring-holder"></div>
+          <div class="ring-pct" id="ring-pct-text">0%</div>
+        </div>
+        <div class="summary-text">
+          <div class="summary-title">Today's lock-in</div>
+          <div class="summary-sub" id="summary-sub">0 of 0 goals locked in</div>
+        </div>
+        <div class="streak-badge">
+          <div class="streak-num" id="streak-num">0</div>
+          <div class="streak-label">Streak</div>
+        </div>
+      </div>
+
+      <div id="categories"></div>
+
+      <div class="notes-label">Reflection / notes for today</div>
+      <div class="notes-box">
+        <textarea id="notes-input" placeholder="How did today go? What's the plan for tomorrow?"></textarea>
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div class="view" id="view-history">
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-streak">0</div>
+          <div class="stat-label">Current Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-winrate">0/0</div>
+          <div class="stat-label">Win Days</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-avg">0%</div>
+          <div class="stat-label">Avg Completion</div>
+        </div>
+      </div>
+
+      <div class="heatmap-title">Last 12 weeks</div>
+      <div class="heatmap" id="heatmap"></div>
+
+      <div class="heatmap-title" style="margin-top:24px;">Recent days</div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+    <div class="footer-note">Built for the version of you that hates losing.</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
