@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
   goals: "dawg_goals_v1",
   data: "dawg_data_v1",
   settings: "dawg_settings_v1",
+  workoutExercises: "dawg_workout_exercises_v1",
+  workoutSessions: "dawg_workout_sessions_v1",
 };
 
 const QUOTES = [
@@ -50,6 +52,18 @@ const CATEGORIES = [
   { id: "discipline", label: "Discipline", icon: "\u{1F525}" },
 ];
 
+const WORKOUT_DAYS = [
+  { id: "push", label: "Push" },
+  { id: "pull", label: "Pull" },
+  { id: "quads", label: "Quads & Glutes" },
+];
+
+const DEFAULT_WORKOUT_EXERCISES = {
+  push: ["Bench Press", "Overhead Press", "Incline Dumbbell Press", "Tricep Pushdown", "Lateral Raise"],
+  pull: ["Deadlift", "Barbell Row", "Lat Pulldown", "Face Pull", "Bicep Curl"],
+  quads: ["Squat", "Leg Press", "Walking Lunges", "Leg Extension", "Hip Thrust"],
+};
+
 // ---------- storage helpers ----------
 
 function loadGoals() {
@@ -89,6 +103,36 @@ function loadSettings() {
   return { streakThreshold: 80 };
 }
 
+function loadWorkoutExercises() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.workoutExercises);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  const fresh = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_EXERCISES));
+  saveWorkoutExercises(fresh);
+  return fresh;
+}
+
+function saveWorkoutExercises(obj) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.workoutExercises, JSON.stringify(obj));
+  } catch (e) {}
+}
+
+function loadWorkoutSessions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.workoutSessions);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { push: [], pull: [], quads: [] };
+}
+
+function saveWorkoutSessions(obj) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.workoutSessions, JSON.stringify(obj));
+  } catch (e) {}
+}
+
 // ---------- date helpers ----------
 
 function todayKey(d = new Date()) {
@@ -115,6 +159,9 @@ let goals = loadGoals();
 let data = loadData();
 let settings = loadSettings();
 let currentDayKey = todayKey();
+let workoutExercises = loadWorkoutExercises();
+let workoutSessions = loadWorkoutSessions();
+let currentWorkoutDay = "push";
 
 // ---------- day record helpers ----------
 
@@ -384,12 +431,200 @@ function renderLogList() {
   });
 }
 
+// ---------- workouts view ----------
+
+function getSessionsForDay(day) {
+  if (!workoutSessions[day]) workoutSessions[day] = [];
+  return workoutSessions[day];
+}
+
+function getTodayWorkoutSession(day, createIfMissing) {
+  const list = getSessionsForDay(day);
+  let session = list.find((s) => s.date === currentDayKey);
+  if (!session && createIfMissing) {
+    session = { date: currentDayKey, exercises: [] };
+    list.push(session);
+  }
+  return session;
+}
+
+function getExerciseEntry(session, name, createIfMissing) {
+  let entry = session.exercises.find((e) => e.name === name);
+  if (!entry && createIfMissing) {
+    entry = { name, sets: [] };
+    session.exercises.push(entry);
+  }
+  return entry;
+}
+
+function lastLoggedEntry(day, name) {
+  const list = getSessionsForDay(day)
+    .filter((s) => s.date !== currentDayKey && s.date < currentDayKey)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of list) {
+    const entry = s.exercises.find((e) => e.name === name);
+    if (entry && entry.sets.length) return entry;
+  }
+  return null;
+}
+
+function formatSets(sets) {
+  return sets
+    .map((s) => `${s.weight === "" || s.weight == null ? "?" : s.weight}×${s.reps === "" || s.reps == null ? "?" : s.reps}`)
+    .join(", ");
+}
+
+function switchWorkoutDay(day) {
+  currentWorkoutDay = day;
+  renderWorkouts();
+}
+
+function renderWorkouts() {
+  document.querySelectorAll(".workout-subtab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.day === currentWorkoutDay);
+  });
+
+  const container = document.getElementById("workout-exercises");
+  container.innerHTML = "";
+
+  const exerciseNames = workoutExercises[currentWorkoutDay] || [];
+  const session = getTodayWorkoutSession(currentWorkoutDay, false);
+
+  exerciseNames.forEach((name) => {
+    const entry = session ? getExerciseEntry(session, name, false) : null;
+    const sets = entry ? entry.sets : [];
+    const last = lastLoggedEntry(currentWorkoutDay, name);
+
+    const card = document.createElement("div");
+    card.className = "exercise-card";
+
+    const head = document.createElement("div");
+    head.className = "exercise-head";
+    head.innerHTML = `
+      <div class="exercise-name">${escapeHtml(name)}</div>
+      <div class="exercise-last">${last ? "Last: " + escapeHtml(formatSets(last.sets)) : "No previous data"}</div>
+      <div class="exercise-del" title="Remove exercise">✕</div>
+    `;
+    head.querySelector(".exercise-del").addEventListener("click", () => removeExercise(currentWorkoutDay, name));
+    card.appendChild(head);
+
+    const setList = document.createElement("div");
+    setList.className = "set-list";
+    sets.forEach((set, idx) => {
+      const row = document.createElement("div");
+      row.className = "set-row";
+      row.innerHTML = `
+        <span class="set-index">${idx + 1}</span>
+        <input type="number" step="0.5" inputmode="decimal" class="set-weight" placeholder="kg" value="${set.weight ?? ""}" />
+        <span class="set-x">×</span>
+        <input type="number" step="1" inputmode="numeric" class="set-reps" placeholder="reps" value="${set.reps ?? ""}" />
+        <div class="item-del set-del" title="Remove set">✕</div>
+      `;
+      row.querySelector(".set-weight").addEventListener("input", (e) => updateSet(name, idx, "weight", e.target.value));
+      row.querySelector(".set-reps").addEventListener("input", (e) => updateSet(name, idx, "reps", e.target.value));
+      row.querySelector(".set-del").addEventListener("click", () => removeSet(name, idx));
+      setList.appendChild(row);
+    });
+    card.appendChild(setList);
+
+    const addSetBtn = document.createElement("button");
+    addSetBtn.className = "add-set-btn";
+    addSetBtn.textContent = "+ Add Set";
+    addSetBtn.addEventListener("click", () => addSet(name, last));
+    card.appendChild(addSetBtn);
+
+    container.appendChild(card);
+  });
+
+  renderWorkoutHistory();
+}
+
+function addSet(name, last) {
+  const session = getTodayWorkoutSession(currentWorkoutDay, true);
+  const entry = getExerciseEntry(session, name, true);
+  const prevSet = entry.sets[entry.sets.length - 1];
+  let defaultWeight = "";
+  if (prevSet && prevSet.weight !== "" && prevSet.weight != null) defaultWeight = prevSet.weight;
+  else if (last && last.sets.length) {
+    const lastSet = last.sets[last.sets.length - 1];
+    if (lastSet.weight !== "" && lastSet.weight != null) defaultWeight = lastSet.weight;
+  }
+  entry.sets.push({ weight: defaultWeight, reps: "" });
+  saveWorkoutSessions(workoutSessions);
+  renderWorkouts();
+}
+
+function updateSet(name, idx, field, value) {
+  const session = getTodayWorkoutSession(currentWorkoutDay, true);
+  const entry = getExerciseEntry(session, name, true);
+  entry.sets[idx][field] = value === "" ? "" : Number(value);
+  saveWorkoutSessions(workoutSessions);
+}
+
+function removeSet(name, idx) {
+  const session = getTodayWorkoutSession(currentWorkoutDay, false);
+  if (!session) return;
+  const entry = getExerciseEntry(session, name, false);
+  if (!entry) return;
+  entry.sets.splice(idx, 1);
+  saveWorkoutSessions(workoutSessions);
+  renderWorkouts();
+}
+
+function addExercise(day, name) {
+  if (!workoutExercises[day]) workoutExercises[day] = [];
+  workoutExercises[day].push(name);
+  saveWorkoutExercises(workoutExercises);
+  renderWorkouts();
+}
+
+function removeExercise(day, name) {
+  workoutExercises[day] = (workoutExercises[day] || []).filter((n) => n !== name);
+  saveWorkoutExercises(workoutExercises);
+  renderWorkouts();
+}
+
+function renderWorkoutHistory() {
+  const el = document.getElementById("workout-history-list");
+  el.innerHTML = "";
+  const list = getSessionsForDay(currentWorkoutDay)
+    .filter((s) => s.exercises.some((e) => e.sets.length > 0))
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 10);
+
+  if (list.length === 0) {
+    const dayLabel = WORKOUT_DAYS.find((d) => d.id === currentWorkoutDay).label;
+    el.innerHTML = `<div class="empty-note">No ${escapeHtml(dayLabel)} sessions logged yet.</div>`;
+    return;
+  }
+
+  list.forEach((session) => {
+    const row = document.createElement("div");
+    row.className = "workout-log-row";
+    const isToday = session.date === currentDayKey;
+    const lines = session.exercises
+      .filter((e) => e.sets.length > 0)
+      .map(
+        (e) => `
+        <div class="workout-log-exercise">
+          <span>${escapeHtml(e.name)}</span>
+          <span>${escapeHtml(formatSets(e.sets))}</span>
+        </div>`
+      )
+      .join("");
+    row.innerHTML = `<div class="workout-log-date">${formatShort(session.date)}${isToday ? " (today)" : ""}</div>${lines}`;
+    el.appendChild(row);
+  });
+}
+
 // ---------- tabs ----------
 
 function switchTab(tabName) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tabName));
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${tabName}`));
   if (tabName === "history") renderHistory();
+  if (tabName === "workouts") renderWorkouts();
 }
 
 // ---------- init ----------
@@ -407,6 +642,24 @@ function init() {
 
   document.getElementById("notes-input").addEventListener("input", (e) => {
     updateNotes(e.target.value);
+  });
+
+  document.querySelectorAll(".workout-subtab").forEach((t) => {
+    t.addEventListener("click", () => switchWorkoutDay(t.dataset.day));
+  });
+
+  const addExerciseInput = document.getElementById("workout-add-exercise-input");
+  const addExerciseBtn = document.getElementById("workout-add-exercise-btn");
+  const submitExercise = () => {
+    const val = addExerciseInput.value.trim();
+    if (val) {
+      addExercise(currentWorkoutDay, val);
+      addExerciseInput.value = "";
+    }
+  };
+  addExerciseBtn.addEventListener("click", submitExercise);
+  addExerciseInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitExercise();
   });
 }
 

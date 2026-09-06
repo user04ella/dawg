@@ -19,6 +19,7 @@
 
     <div class="tabs">
       <div class="tab active" data-tab="today">Today</div>
+      <div class="tab" data-tab="workouts">Workouts</div>
       <div class="tab" data-tab="history">History</div>
     </div>
 
@@ -46,6 +47,26 @@
       <div class="notes-box">
         <textarea id="notes-input" placeholder="How did today go? What's the plan for tomorrow?"></textarea>
       </div>
+    </div>
+
+    <!-- WORKOUTS VIEW -->
+    <div class="view" id="view-workouts">
+
+      <div class="workout-subtabs">
+        <div class="workout-subtab active" data-day="push">Push</div>
+        <div class="workout-subtab" data-day="pull">Pull</div>
+        <div class="workout-subtab" data-day="quads">Quads & Glutes</div>
+      </div>
+
+      <div id="workout-exercises"></div>
+
+      <div class="add-row">
+        <input type="text" id="workout-add-exercise-input" placeholder="Add an exercise..." />
+        <button id="workout-add-exercise-btn">Add</button>
+      </div>
+
+      <div class="heatmap-title" style="margin-top:24px;">Recent sessions</div>
+      <div class="log-list" id="workout-history-list"></div>
     </div>
 
     <!-- HISTORY VIEW -->
