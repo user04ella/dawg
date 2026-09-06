@@ -7,8 +7,7 @@ const STORAGE_KEYS = {
   goals: "dawg_goals_v1",
   data: "dawg_data_v1",
   settings: "dawg_settings_v1",
-  workoutExercises: "dawg_workout_exercises_v1",
-  workoutSessions: "dawg_workout_sessions_v1",
+  workoutPlan: "dawg_workout_plan_v1",
 };
 
 const QUOTES = [
@@ -52,17 +51,15 @@ const CATEGORIES = [
   { id: "discipline", label: "Discipline", icon: "\u{1F525}" },
 ];
 
-const WORKOUT_DAYS = [
-  { id: "push", label: "Push" },
-  { id: "pull", label: "Pull" },
-  { id: "quads", label: "Quads & Glutes" },
+const ACTIVITY_TYPES = [
+  { id: "run", label: "Run", icon: "\u{1F3C3}" },
+  { id: "swim", label: "Swim", icon: "\u{1F3CA}" },
+  { id: "cycle", label: "Cycle", icon: "\u{1F6B4}" },
+  { id: "gym", label: "Gym", icon: "\u{1F3CB}" },
+  { id: "walk", label: "Walk", icon: "\u{1F6B6}" },
 ];
 
-const DEFAULT_WORKOUT_EXERCISES = {
-  push: ["Bench Press", "Overhead Press", "Incline Dumbbell Press", "Tricep Pushdown", "Lateral Raise"],
-  pull: ["Deadlift", "Barbell Row", "Lat Pulldown", "Face Pull", "Bicep Curl"],
-  quads: ["Squat", "Leg Press", "Walking Lunges", "Leg Extension", "Hip Thrust"],
-};
+const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 // ---------- storage helpers ----------
 
@@ -103,33 +100,17 @@ function loadSettings() {
   return { streakThreshold: 80 };
 }
 
-function loadWorkoutExercises() {
+function loadWorkoutPlan() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.workoutExercises);
+    const raw = localStorage.getItem(STORAGE_KEYS.workoutPlan);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  const fresh = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_EXERCISES));
-  saveWorkoutExercises(fresh);
-  return fresh;
+  return {};
 }
 
-function saveWorkoutExercises(obj) {
+function saveWorkoutPlan(obj) {
   try {
-    localStorage.setItem(STORAGE_KEYS.workoutExercises, JSON.stringify(obj));
-  } catch (e) {}
-}
-
-function loadWorkoutSessions() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.workoutSessions);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
-  return { push: [], pull: [], quads: [] };
-}
-
-function saveWorkoutSessions(obj) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.workoutSessions, JSON.stringify(obj));
+    localStorage.setItem(STORAGE_KEYS.workoutPlan, JSON.stringify(obj));
   } catch (e) {}
 }
 
@@ -153,15 +134,23 @@ function formatShort(dateKey) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+function getMonday(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay(); // 0 = Sunday .. 6 = Saturday
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
 // ---------- state ----------
 
 let goals = loadGoals();
 let data = loadData();
 let settings = loadSettings();
 let currentDayKey = todayKey();
-let workoutExercises = loadWorkoutExercises();
-let workoutSessions = loadWorkoutSessions();
-let currentWorkoutDay = "push";
+let workoutPlan = loadWorkoutPlan();
+let currentWeekStart = getMonday(new Date());
 
 // ---------- day record helpers ----------
 
@@ -431,191 +420,125 @@ function renderLogList() {
   });
 }
 
-// ---------- workouts view ----------
+// ---------- workouts view (weekly planner) ----------
 
-function getSessionsForDay(day) {
-  if (!workoutSessions[day]) workoutSessions[day] = [];
-  return workoutSessions[day];
+function getDayPlan(dateKey) {
+  if (!workoutPlan[dateKey]) workoutPlan[dateKey] = { am: [], pm: [] };
+  return workoutPlan[dateKey];
 }
 
-function getTodayWorkoutSession(day, createIfMissing) {
-  const list = getSessionsForDay(day);
-  let session = list.find((s) => s.date === currentDayKey);
-  if (!session && createIfMissing) {
-    session = { date: currentDayKey, exercises: [] };
-    list.push(session);
-  }
-  return session;
+function shiftWeek(deltaWeeks) {
+  currentWeekStart = addDays(currentWeekStart, deltaWeeks * 7);
+  renderWorkoutWeek();
 }
 
-function getExerciseEntry(session, name, createIfMissing) {
-  let entry = session.exercises.find((e) => e.name === name);
-  if (!entry && createIfMissing) {
-    entry = { name, sets: [] };
-    session.exercises.push(entry);
-  }
-  return entry;
+function jumpToThisWeek() {
+  currentWeekStart = getMonday(new Date());
+  renderWorkoutWeek();
 }
 
-function lastLoggedEntry(day, name) {
-  const list = getSessionsForDay(day)
-    .filter((s) => s.date !== currentDayKey && s.date < currentDayKey)
-    .sort((a, b) => b.date.localeCompare(a.date));
-  for (const s of list) {
-    const entry = s.exercises.find((e) => e.name === name);
-    if (entry && entry.sets.length) return entry;
-  }
-  return null;
+function addActivitySlot(dateKey, period) {
+  const dp = getDayPlan(dateKey);
+  if (dp[period].length >= 2) return;
+  dp[period].push({ activity: ACTIVITY_TYPES[0].id, done: false });
+  saveWorkoutPlan(workoutPlan);
+  renderWorkoutWeek();
 }
 
-function formatSets(sets) {
-  return sets
-    .map((s) => `${s.weight === "" || s.weight == null ? "?" : s.weight}×${s.reps === "" || s.reps == null ? "?" : s.reps}`)
-    .join(", ");
+function toggleSlotDone(dateKey, period, idx) {
+  const dp = getDayPlan(dateKey);
+  dp[period][idx].done = !dp[period][idx].done;
+  saveWorkoutPlan(workoutPlan);
+  renderWorkoutWeek();
 }
 
-function switchWorkoutDay(day) {
-  currentWorkoutDay = day;
-  renderWorkouts();
+function updateSlotActivity(dateKey, period, idx, value) {
+  const dp = getDayPlan(dateKey);
+  dp[period][idx].activity = value;
+  saveWorkoutPlan(workoutPlan);
+  renderWorkoutWeek();
 }
 
-function renderWorkouts() {
-  document.querySelectorAll(".workout-subtab").forEach((t) => {
-    t.classList.toggle("active", t.dataset.day === currentWorkoutDay);
-  });
+function removeActivitySlot(dateKey, period, idx) {
+  const dp = getDayPlan(dateKey);
+  dp[period].splice(idx, 1);
+  saveWorkoutPlan(workoutPlan);
+  renderWorkoutWeek();
+}
 
-  const container = document.getElementById("workout-exercises");
+function renderWorkoutWeek() {
+  const monday = currentWeekStart;
+  const sunday = addDays(monday, 6);
+  document.getElementById("week-label").textContent =
+    `${formatShort(todayKey(monday))} – ${formatShort(todayKey(sunday))}`;
+
+  const container = document.getElementById("week-days");
   container.innerHTML = "";
 
-  const exerciseNames = workoutExercises[currentWorkoutDay] || [];
-  const session = getTodayWorkoutSession(currentWorkoutDay, false);
-
-  exerciseNames.forEach((name) => {
-    const entry = session ? getExerciseEntry(session, name, false) : null;
-    const sets = entry ? entry.sets : [];
-    const last = lastLoggedEntry(currentWorkoutDay, name);
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(monday, i);
+    const dateKey = todayKey(d);
+    const isToday = dateKey === todayKey();
 
     const card = document.createElement("div");
-    card.className = "exercise-card";
+    card.className = "day-card" + (isToday ? " is-today" : "");
 
     const head = document.createElement("div");
-    head.className = "exercise-head";
+    head.className = "day-head";
     head.innerHTML = `
-      <div class="exercise-name">${escapeHtml(name)}</div>
-      <div class="exercise-last">${last ? "Last: " + escapeHtml(formatSets(last.sets)) : "No previous data"}</div>
-      <div class="exercise-del" title="Remove exercise">✕</div>
+      <span class="day-weekday">${WEEKDAY_NAMES[i]}</span>
+      <span class="day-date">${formatShort(dateKey)}</span>
+      ${isToday ? '<span class="day-today-badge">Today</span>' : ""}
     `;
-    head.querySelector(".exercise-del").addEventListener("click", () => removeExercise(currentWorkoutDay, name));
     card.appendChild(head);
 
-    const setList = document.createElement("div");
-    setList.className = "set-list";
-    sets.forEach((set, idx) => {
-      const row = document.createElement("div");
-      row.className = "set-row";
-      row.innerHTML = `
-        <span class="set-index">${idx + 1}</span>
-        <input type="number" step="0.5" inputmode="decimal" class="set-weight" placeholder="kg" value="${set.weight ?? ""}" />
-        <span class="set-x">×</span>
-        <input type="number" step="1" inputmode="numeric" class="set-reps" placeholder="reps" value="${set.reps ?? ""}" />
-        <div class="item-del set-del" title="Remove set">✕</div>
-      `;
-      row.querySelector(".set-weight").addEventListener("input", (e) => updateSet(name, idx, "weight", e.target.value));
-      row.querySelector(".set-reps").addEventListener("input", (e) => updateSet(name, idx, "reps", e.target.value));
-      row.querySelector(".set-del").addEventListener("click", () => removeSet(name, idx));
-      setList.appendChild(row);
-    });
-    card.appendChild(setList);
-
-    const addSetBtn = document.createElement("button");
-    addSetBtn.className = "add-set-btn";
-    addSetBtn.textContent = "+ Add Set";
-    addSetBtn.addEventListener("click", () => addSet(name, last));
-    card.appendChild(addSetBtn);
+    card.appendChild(renderPeriodBlock(dateKey, "am"));
+    card.appendChild(renderPeriodBlock(dateKey, "pm"));
 
     container.appendChild(card);
-  });
-
-  renderWorkoutHistory();
-}
-
-function addSet(name, last) {
-  const session = getTodayWorkoutSession(currentWorkoutDay, true);
-  const entry = getExerciseEntry(session, name, true);
-  const prevSet = entry.sets[entry.sets.length - 1];
-  let defaultWeight = "";
-  if (prevSet && prevSet.weight !== "" && prevSet.weight != null) defaultWeight = prevSet.weight;
-  else if (last && last.sets.length) {
-    const lastSet = last.sets[last.sets.length - 1];
-    if (lastSet.weight !== "" && lastSet.weight != null) defaultWeight = lastSet.weight;
   }
-  entry.sets.push({ weight: defaultWeight, reps: "" });
-  saveWorkoutSessions(workoutSessions);
-  renderWorkouts();
 }
 
-function updateSet(name, idx, field, value) {
-  const session = getTodayWorkoutSession(currentWorkoutDay, true);
-  const entry = getExerciseEntry(session, name, true);
-  entry.sets[idx][field] = value === "" ? "" : Number(value);
-  saveWorkoutSessions(workoutSessions);
-}
+function renderPeriodBlock(dateKey, period) {
+  const dp = workoutPlan[dateKey] || { am: [], pm: [] };
+  const slots = dp[period] || [];
 
-function removeSet(name, idx) {
-  const session = getTodayWorkoutSession(currentWorkoutDay, false);
-  if (!session) return;
-  const entry = getExerciseEntry(session, name, false);
-  if (!entry) return;
-  entry.sets.splice(idx, 1);
-  saveWorkoutSessions(workoutSessions);
-  renderWorkouts();
-}
+  const block = document.createElement("div");
+  block.className = "period-block";
 
-function addExercise(day, name) {
-  if (!workoutExercises[day]) workoutExercises[day] = [];
-  workoutExercises[day].push(name);
-  saveWorkoutExercises(workoutExercises);
-  renderWorkouts();
-}
+  const label = document.createElement("div");
+  label.className = "period-label";
+  label.textContent = period.toUpperCase();
+  block.appendChild(label);
 
-function removeExercise(day, name) {
-  workoutExercises[day] = (workoutExercises[day] || []).filter((n) => n !== name);
-  saveWorkoutExercises(workoutExercises);
-  renderWorkouts();
-}
-
-function renderWorkoutHistory() {
-  const el = document.getElementById("workout-history-list");
-  el.innerHTML = "";
-  const list = getSessionsForDay(currentWorkoutDay)
-    .filter((s) => s.exercises.some((e) => e.sets.length > 0))
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 10);
-
-  if (list.length === 0) {
-    const dayLabel = WORKOUT_DAYS.find((d) => d.id === currentWorkoutDay).label;
-    el.innerHTML = `<div class="empty-note">No ${escapeHtml(dayLabel)} sessions logged yet.</div>`;
-    return;
-  }
-
-  list.forEach((session) => {
+  slots.forEach((slot, idx) => {
     const row = document.createElement("div");
-    row.className = "workout-log-row";
-    const isToday = session.date === currentDayKey;
-    const lines = session.exercises
-      .filter((e) => e.sets.length > 0)
-      .map(
-        (e) => `
-        <div class="workout-log-exercise">
-          <span>${escapeHtml(e.name)}</span>
-          <span>${escapeHtml(formatSets(e.sets))}</span>
-        </div>`
-      )
-      .join("");
-    row.innerHTML = `<div class="workout-log-date">${formatShort(session.date)}${isToday ? " (today)" : ""}</div>${lines}`;
-    el.appendChild(row);
+    row.className = "wk-slot" + (slot.done ? " checked" : "");
+    const options = ACTIVITY_TYPES.map(
+      (a) => `<option value="${a.id}" ${a.id === slot.activity ? "selected" : ""}>${a.icon} ${a.label}</option>`
+    ).join("");
+    row.innerHTML = `
+      <div class="wk-check">${slot.done ? "✓" : ""}</div>
+      <select class="wk-activity-select">${options}</select>
+      <div class="wk-del" title="Remove">✕</div>
+    `;
+    row.querySelector(".wk-check").addEventListener("click", () => toggleSlotDone(dateKey, period, idx));
+    row.querySelector(".wk-activity-select").addEventListener("change", (e) =>
+      updateSlotActivity(dateKey, period, idx, e.target.value)
+    );
+    row.querySelector(".wk-del").addEventListener("click", () => removeActivitySlot(dateKey, period, idx));
+    block.appendChild(row);
   });
+
+  if (slots.length < 2) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "wk-add-btn";
+    addBtn.textContent = "+ Add";
+    addBtn.addEventListener("click", () => addActivitySlot(dateKey, period));
+    block.appendChild(addBtn);
+  }
+
+  return block;
 }
 
 // ---------- tabs ----------
@@ -624,7 +547,7 @@ function switchTab(tabName) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tabName));
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${tabName}`));
   if (tabName === "history") renderHistory();
-  if (tabName === "workouts") renderWorkouts();
+  if (tabName === "workouts") renderWorkoutWeek();
 }
 
 // ---------- init ----------
@@ -644,23 +567,9 @@ function init() {
     updateNotes(e.target.value);
   });
 
-  document.querySelectorAll(".workout-subtab").forEach((t) => {
-    t.addEventListener("click", () => switchWorkoutDay(t.dataset.day));
-  });
-
-  const addExerciseInput = document.getElementById("workout-add-exercise-input");
-  const addExerciseBtn = document.getElementById("workout-add-exercise-btn");
-  const submitExercise = () => {
-    const val = addExerciseInput.value.trim();
-    if (val) {
-      addExercise(currentWorkoutDay, val);
-      addExerciseInput.value = "";
-    }
-  };
-  addExerciseBtn.addEventListener("click", submitExercise);
-  addExerciseInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitExercise();
-  });
+  document.getElementById("week-prev").addEventListener("click", () => shiftWeek(-1));
+  document.getElementById("week-next").addEventListener("click", () => shiftWeek(1));
+  document.getElementById("week-today").addEventListener("click", jumpToThisWeek);
 }
 
 document.addEventListener("DOMContentLoaded", init);

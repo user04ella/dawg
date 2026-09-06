@@ -52,21 +52,16 @@
     <!-- WORKOUTS VIEW -->
     <div class="view" id="view-workouts">
 
-      <div class="workout-subtabs">
-        <div class="workout-subtab active" data-day="push">Push</div>
-        <div class="workout-subtab" data-day="pull">Pull</div>
-        <div class="workout-subtab" data-day="quads">Quads & Glutes</div>
+      <div class="week-nav">
+        <button class="week-nav-btn" id="week-prev" aria-label="Previous week">‹</button>
+        <div class="week-nav-center">
+          <div class="week-label" id="week-label">This week</div>
+          <div class="week-today-link" id="week-today">Jump to this week</div>
+        </div>
+        <button class="week-nav-btn" id="week-next" aria-label="Next week">›</button>
       </div>
 
-      <div id="workout-exercises"></div>
-
-      <div class="add-row">
-        <input type="text" id="workout-add-exercise-input" placeholder="Add an exercise..." />
-        <button id="workout-add-exercise-btn">Add</button>
-      </div>
-
-      <div class="heatmap-title" style="margin-top:24px;">Recent sessions</div>
-      <div class="log-list" id="workout-history-list"></div>
+      <div id="week-days"></div>
     </div>
 
     <!-- HISTORY VIEW -->

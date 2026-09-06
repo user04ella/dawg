@@ -32,6 +32,12 @@ Or deploy it for free with GitHub Pages: Settings → Pages → deploy from this
 | Mobility / stretch session | No junk / processed food | 3 practice questions (Qbank) done | No scrolling phone on first wake up |
 | | Supplements taken | Lecture / rotation review done | Reflected & planned tomorrow |
 
+**Workouts tab**
+- A Monday–Sunday weekly planner with AM and PM sections per day
+- Each AM/PM slot holds up to 2 activities — pick from Run / Swim / Cycle / Gym / Walk, and tick the box once it's done
+- `‹` / `›` step you a full week back or forward — plan next week on a Sunday, or check what you did 3 weeks ago
+- "Jump to this week" snaps back to today's week from anywhere
+
 **History tab**
 - Current streak, total win days, and average daily completion
 - A 12-week heatmap (darker yellow = more goals hit that day)
@@ -48,6 +54,6 @@ Or deploy it for free with GitHub Pages: Settings → Pages → deploy from this
 
 ## Data & privacy
 
-Everything is stored in your browser's `localStorage` (`dawg_goals_v1`, `dawg_data_v1`, `dawg_settings_v1`). Nothing leaves your device. This also means:
+Everything is stored in your browser's `localStorage` (`dawg_goals_v1`, `dawg_data_v1`, `dawg_settings_v1`, `dawg_workout_plan_v1`). Nothing leaves your device. This also means:
 - Data is per-browser — it won't sync between your phone and laptop unless you host it somewhere and use the same browser profile, or add your own sync layer later.
 - Clearing site data / browser storage will wipe your history. There's no export yet — worth adding if you start relying on this daily (happy to add a JSON export/import button on request).
